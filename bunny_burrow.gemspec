@@ -4,16 +4,17 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'bunny_burrow/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'bunny_burrow'
-  spec.version       = BunnyBurrow::VERSION
-  spec.authors       = ['Fidelity Life Association']
+  spec.name                  = 'bunny_burrow'
+  spec.version               = BunnyBurrow::VERSION
+  spec.authors               = ['Fidelity Life Association']
 
-  spec.summary       = 'RPC over RabbitMQ based on Bunny.'
-  spec.description   = spec.summary
-  spec.license       = 'MIT'
+  spec.summary               = 'RPC over RabbitMQ based on Bunny.'
+  spec.description           = spec.summary
+  spec.license               = 'MIT'
 
-  spec.files         = ['lib/bunny_burrow.rb']
-  spec.require_paths = ['lib']
+  spec.files                 = ['lib/bunny_burrow.rb']
+  spec.require_paths         = ['lib']
+  spec.required_ruby_version = '>= 2.0.0'
 
   spec.add_development_dependency 'bundler', '~> 1.11'
   spec.add_development_dependency 'pry'
