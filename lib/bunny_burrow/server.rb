@@ -31,12 +31,6 @@ module BunnyBurrow
           details[:request] = payload if log_request?
           log "Receiving #{details}"
 
-          response = {
-            status: STATUS_OK,
-            messages: [],
-            data: {}
-          }
-
           response = block.call(payload)
 
           details[:response] = response if log_response?
@@ -50,7 +44,7 @@ module BunnyBurrow
           log e.message, level: :error
           response = {
             status: STATUS_SERVER_ERROR,
-            messages: [e.message]
+            error_message: e.message
           }
           default_exchange.publish(response.to_json, :routing_key => properties.reply_to, persistence: false)
         end
