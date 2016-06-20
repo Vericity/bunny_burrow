@@ -12,33 +12,26 @@ module BunnyBurrow
       details[:request] = payload if log_request?
       log "Publishing #{details}"
 
-      begin
-        options = {
-          routing_key: routing_key,
-          reply_to: reply_to.name,
-          persistence: false
-        }
+      options = {
+        routing_key: routing_key,
+        reply_to: reply_to.name,
+        persistence: false
+      }
 
-        topic_exchange.publish(payload.to_json, options)
+      topic_exchange.publish(payload.to_json, options)
 
-        Timeout.timeout(timeout) do
-          reply_to.subscribe do |_, _, payload|
-            details[:response] = payload if log_response?
-            log "Receiving #{details}"
-            result = payload
-            lock.synchronize { condition.signal }
-          end
-
-          lock.synchronize { condition.wait(lock) }
+      Timeout.timeout(timeout) do
+        reply_to.subscribe do |_, _, payload|
+          details[:response] = payload if log_response?
+          log "Receiving #{details}"
+          result = payload
+          lock.synchronize { condition.signal }
         end
-      rescue Timeout::Error => e
-        log "Timeout #{details}", level: :error
-        result = e.message
+
+        lock.synchronize { condition.wait(lock) }
       end
 
       result
-    rescue => e
-      log e.message, level: :error
     end
 
     private

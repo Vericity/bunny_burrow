@@ -94,21 +94,16 @@ describe BunnyBurrow::Client do
       expect(result).to eq(response)
     end
 
-    it 'rescues and logs timeout errors, returning the error message' do
-      error_message = 'slooooooooow'
-      error = Timeout::Error.new(error_message)
-      allow(reply_to).to receive(:subscribe).and_raise(error)
-      expect(subject).to receive(:log).with(/^Timeout/, level: :error)
-      result = subject.publish request, routing_key
-      expect(result).to eq(error_message)
+    it 'does not rescue timeout errors' do
+      allow(reply_to).to receive(:subscribe).and_raise(Timeout::Error.new)
+      # expect it to get all the way up
+      expect { subject.publish request, routing_key }.to raise_error(Timeout::Error)
     end
 
-    it 'rescues and logs unexpected errors' do
-      error_message = 'Kaboom'
-      allow(subject).to receive(:log_request?).and_raise(RuntimeError.new(error_message))
-      expect(subject).to receive(:log).with(error_message, level: :error)
-      expect(topic_exchange).not_to receive(:publish)
-      subject.publish request, routing_key
+    it 'does not rescue unexpected errors' do
+      allow(subject).to receive(:log_request?).and_raise(RuntimeError.new)
+      # expect it to get all the way up
+      expect { subject.publish request, routing_key }.to raise_error(RuntimeError)
     end
   end # describe '#publish'
 
