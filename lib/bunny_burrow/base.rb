@@ -65,9 +65,10 @@ module BunnyBurrow
     end
 
     def log(message, level: :info)
+      return unless logger
       prefix = log_prefix || 'BunnyBurrow'
       message = "#{prefix}: #{message}"
-      logger.send(level, message) if logger
+      logger.send(level, message)
     end
   end
 end
