@@ -7,6 +7,7 @@ Gem::Specification.new do |spec|
   spec.name                  = 'bunny_burrow'
   spec.version               = BunnyBurrow::VERSION
   spec.authors               = ['Vericity']
+  spec.homepage              = 'https://github.com/johann-koebbe/bunny_burrow'
 
   spec.summary               = 'RPC over RabbitMQ based on Bunny.'
   spec.description           = spec.summary
