@@ -12,8 +12,9 @@ module YourProject
     end
 
     def run
-      rpc_server.subscribe(ROUTING_KEY_ONE) do |payload, response|
+      rpc_server.subscribe(ROUTING_KEY_ONE) do |payload|
         begin
+          response = BunnyBurrow::Server.create_response
           response[:data] = method_one(payload)
         rescue => exception
           handle_exception exception, response
@@ -22,8 +23,9 @@ module YourProject
         response
       end
 
-      rpc_server.subscribe(ROUTING_KEY_TWO) do |payload, response|
+      rpc_server.subscribe(ROUTING_KEY_TWO) do |payload|
         begin
+          response = BunnyBurrow::Server.create_response
           response[:data] = method_two(payload)
         rescue => exception
           handle_exception exception, response
@@ -60,7 +62,7 @@ module YourProject
     end
 
     def handle_exception(exception, response)
-      response[:messages] << exception.message
+      response[:error_message] = exception.message
       response[:status] =
         case exception.class
           when YourClientError

@@ -2,6 +2,14 @@ require_relative 'base'
 
 module BunnyBurrow
   class Server < Base
+    def self.create_response
+      {
+        status: STATUS_OK,
+        error_message: nil,
+        data: nil
+      }
+    end
+
     def subscribe(routing_key, &block)
       queue = channel.queue('', exclusive: true, auto_delete: true)
       queue.bind(topic_exchange, routing_key: routing_key)
@@ -29,7 +37,7 @@ module BunnyBurrow
             data: {}
           }
 
-          response = block.call(payload, response)
+          response = block.call(payload)
 
           details[:response] = response if log_response?
 

@@ -55,7 +55,8 @@ rpc_server = BunnyBurrow::Server.new do |server|
   server.logger = Logger.new(STDOUT)
 end
 
-rpc_server.subscribe('some.routing.key') do |payload, response|
+rpc_server.subscribe('some.routing.key') do |payload|
+  response = BunnyBurrow::Server.create_response
   response[:data] = do_something_with(payload)
 
   # return the response
@@ -63,7 +64,8 @@ rpc_server.subscribe('some.routing.key') do |payload, response|
 end
 
 # can subscribe to multiple queues
-rpc_server.subscribe('some.other.routing.key') do |payload, response|
+rpc_server.subscribe('some.other.routing.key') do |payload|
+  response = BunnyBurrow::Server.create_response
   response[:data] = do_something_else_with(payload)
 
   # return the response

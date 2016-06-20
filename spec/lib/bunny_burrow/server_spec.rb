@@ -11,7 +11,7 @@ describe BunnyBurrow::Server do
       expect(subject.class.ancestors).to include(BunnyBurrow::Base)
     end
 
-    it 'creates a process lock when one does not exist' do
+    it 'creates a process lock when one does not exit' do
       subject.instance_variable_set('@process_lock', nil)
       expect(Mutex).to receive(:new)
       subject.send :process_lock
@@ -45,7 +45,7 @@ describe BunnyBurrow::Server do
     let(:properties)       { double 'properties', reply_to: 'reply.to' }
     let(:queue)            { double 'queue' }
     let(:reply_options)    { { routing_key: properties.reply_to, persistence: false } }
-    let(:response)         { { status: BunnyBurrow::STATUS_OK, messages: [], data: { } } }
+    let(:response)         { { status: BunnyBurrow::STATUS_OK, error_message: nil, data: nil } }
     let(:routing_key)      { 'routing.key' }
     let(:topic_exchange)   { double 'topic exchange' }
 
@@ -97,7 +97,7 @@ describe BunnyBurrow::Server do
     end
 
     it 'yields to the block' do
-      expect(block).to receive(:call).with(payload, response)
+      expect(block).to receive(:call).with(payload)
       subject.subscribe routing_key, &block
     end
 
@@ -209,4 +209,15 @@ describe BunnyBurrow::Server do
       subject.shutdown
     end
   end # describe '#shutdown'
+
+  describe '.create_response' do
+    it 'returns an empty response' do
+      response = {
+        status: BunnyBurrow::STATUS_OK,
+        error_message: nil,
+        data: nil
+      }
+      expect(described_class.create_response).to eq(response)
+    end
+  end # describe '.create_response'
 end # describe Server
