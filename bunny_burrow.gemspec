@@ -6,7 +6,7 @@ require 'bunny_burrow/version'
 Gem::Specification.new do |spec|
   spec.name                  = 'bunny_burrow'
   spec.version               = BunnyBurrow::VERSION
-  spec.authors               = ['Fidelity Life Association']
+  spec.authors               = ['Vericity']
 
   spec.summary               = 'RPC over RabbitMQ based on Bunny.'
   spec.description           = spec.summary
