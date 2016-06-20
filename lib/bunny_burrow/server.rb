@@ -6,7 +6,7 @@ module BunnyBurrow
       {
         status: STATUS_OK,
         error_message: nil,
-        data: nil
+        data: {}
       }
     end
 

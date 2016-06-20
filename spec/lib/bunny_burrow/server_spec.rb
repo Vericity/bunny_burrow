@@ -215,7 +215,7 @@ describe BunnyBurrow::Server do
       response = {
         status: BunnyBurrow::STATUS_OK,
         error_message: nil,
-        data: nil
+        data: {}
       }
       expect(described_class.create_response).to eq(response)
     end
