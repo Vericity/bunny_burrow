@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH << File.expand_path('../lib', __dir__)
+
+require 'raven_init'
+require 'env_hash_config'
+require 'your_project/worker'
+
+context = EnvHashConfig.create
+worker = YourProject::Worker.new(context)
+worker.run
+
+at_exit do
+  worker.shutdown
+end
+
