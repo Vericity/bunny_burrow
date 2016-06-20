@@ -24,5 +24,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'simplecov', '~> 0.11.2'
   spec.add_development_dependency 'simplecov-rcov', '~> 0.2.3'
 
-  spec.add_runtime_dependency 'bunny', '~> 2.3.1'
+  spec.add_runtime_dependency 'bunny', '~> 2.3'
 end
