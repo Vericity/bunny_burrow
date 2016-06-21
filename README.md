@@ -122,6 +122,12 @@ $ git add .
 $ git commit -m 'Initial commit.'
 ```
 
+## Notes
+
+Due to the locking implementation in `BunnyBurrow::Client#publish`, there is the potential for a
+race condition if the same client is used to publish on separate threads. If that behavior is
+desired, `publish` will need to be changed to use a dedicated mutex.
+
 ## Development
 
 After checking out the repo, run `bundle install [--path vendor/bundle]` to install dependencies.
