@@ -24,6 +24,10 @@ describe BunnyBurrow::Base do
     it 'defaults log_response to false' do
       expect(subject.log_response?).to be_falsey
     end
+
+    it 'defaults verify_peer to true' do
+      expect(subject.verify_peer?).to be true
+    end
   end # describe 'default initialization'
 
   describe 'custom initialization' do
@@ -42,6 +46,7 @@ describe BunnyBurrow::Base do
         dc.timeout = timeout
         dc.log_request = true
         dc.log_response = true
+        dc.verify_peer = false
       end
     end
 
@@ -72,6 +77,10 @@ describe BunnyBurrow::Base do
     it 'allows log_response to be set' do
       expect(subject.log_response?).to be_truthy
     end
+
+    it 'allows verify_peer to be set' do
+      expect(subject.verify_peer?).to be_falsey
+    end
   end # describe 'custom initialization'
 
   describe 'instance' do
@@ -99,6 +108,10 @@ describe BunnyBurrow::Base do
       subject.instance_variable_set('@connection', nil)
       expect(Bunny).to receive(:new).and_return(connection)
       subject.send :connection
+    end
+
+    it 'sets verify_peer on the connection' do
+      expect(Bunny).not_to receive(:new).with(anything, verify_peer: true)
     end
 
     it 'uses an existing connection' do
