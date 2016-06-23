@@ -8,23 +8,19 @@ module BunnyBurrow
   STATUS_SERVER_ERROR = 'server_error'
 
   class Base
-    attr_accessor :rabbitmq_url, :rabbitmq_exchange, :logger, :log_prefix
-    attr_writer :timeout, :log_request, :log_response
+    attr_accessor :rabbitmq_url, :rabbitmq_exchange, :logger, :log_prefix, :verify_peer, :timeout, :log_request, :log_response
+
+    alias_method :verify_peer?, :verify_peer
+    alias_method :log_request?, :log_request
+    alias_method :log_response?, :log_response
 
     def initialize
+      @log_request = false
+      @log_response = false
+      @timeout = 60
+      @verify_peer = true
+
       yield self if block_given?
-    end
-
-    def timeout
-      @timeout ||= 60
-    end
-
-    def log_request?
-      @log_request ||= false
-    end
-
-    def log_response?
-      @log_response ||= false
     end
 
     def shutdown
@@ -37,7 +33,7 @@ module BunnyBurrow
 
     def connection
       unless @connection
-        @connection = Bunny.new(rabbitmq_url)
+        @connection = Bunny.new(rabbitmq_url, verify_peer: @verify_peer)
         @connection.start
       end
 
