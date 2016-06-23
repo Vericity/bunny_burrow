@@ -33,7 +33,7 @@ module BunnyBurrow
 
     def connection
       unless @connection
-        @connection = Bunny.new(rabbitmq_url)
+        @connection = Bunny.new(rabbitmq_url, verify_peer: @verify_peer)
         @connection.start
       end
 

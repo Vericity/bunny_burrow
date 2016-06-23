@@ -111,7 +111,10 @@ describe BunnyBurrow::Base do
     end
 
     it 'sets verify_peer on the connection' do
-      expect(Bunny).not_to receive(:new).with(anything, verify_peer: true)
+      allow(connection).to receive(:start)
+      subject.instance_variable_set('@connection', nil)
+      expect(Bunny).to receive(:new).and_return(connection).with(anything, verify_peer: true)
+      subject.send :connection
     end
 
     it 'uses an existing connection' do
