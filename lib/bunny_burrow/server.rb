@@ -54,11 +54,14 @@ module BunnyBurrow
     end
 
     def wait
+      @waiting = true
       process_lock.synchronize { process_condition.wait(process_lock) }
     end
 
     def stop_waiting
+      return unless @waiting
       process_lock.synchronize { process_condition.signal }
+      @waiting = false
     end
 
     def shutdown
