@@ -24,9 +24,11 @@ module BunnyBurrow
     end
 
     def shutdown
+      return if @shutdown
       log 'Shutting down'
       channel.close
       connection.close
+      @shutdown = true
     end
 
     private

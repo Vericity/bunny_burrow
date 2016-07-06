@@ -154,6 +154,11 @@ describe BunnyBurrow::Server do
       allow(subject).to receive(:process_lock).and_return(process_lock)
     end
 
+    it 'sets internal wait state' do
+      subject.wait
+      expect(subject.instance_variable_get('@waiting')).to be_truthy
+    end
+
     it 'keeps the process alive' do
       expect(process_lock).to receive(:synchronize)
       expect(process_condition).to receive(:wait).with(process_lock)
@@ -167,11 +172,24 @@ describe BunnyBurrow::Server do
       allow(process_lock).to receive(:synchronize).and_yield
       allow(subject).to receive(:process_condition).and_return(process_condition)
       allow(subject).to receive(:process_lock).and_return(process_lock)
+      subject.instance_variable_set('@waiting', true)
     end
 
     it 'lets the process stop' do
       expect(process_lock).to receive(:synchronize)
       expect(process_condition).to receive(:signal)
+      subject.stop_waiting
+    end
+
+    it 'updates internal wait state' do
+      subject.stop_waiting
+      expect(subject.instance_variable_get('@waiting')).to be_falsey
+    end
+
+    it 'is a noop if it already stopped waiting' do
+      subject.instance_variable_set('@waiting', false)
+      expect(process_lock).not_to receive(:synchronize)
+      expect(process_condition).not_to receive(:signal)
       subject.stop_waiting
     end
   end # describe '#stop_waiting'
@@ -206,6 +224,13 @@ describe BunnyBurrow::Server do
 
     it 'closes the connection' do
       expect(connection).to receive(:close)
+      subject.shutdown
+    end
+
+    it 'does not try to shutdown if already shutdown' do
+      subject.instance_variable_set('@shutdown', true)
+      expect(channel).not_to receive(:close)
+      expect(connection).not_to receive(:close)
       subject.shutdown
     end
   end # describe '#shutdown'
