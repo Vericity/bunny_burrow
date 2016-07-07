@@ -114,7 +114,7 @@ $ grep -r YourProject . | cut -d : -f 1 | xargs sed -i '' 's/YourProject/MyRPCSe
 $ mv lib/your_project lib/my_rpc_server
 ```
 
-Edit the Gemfile as appropriate, then
+Edit the Gemfile and template files as appropriate, then
 
 ```
 $ bundle install [--path vendor/bundle]
@@ -123,6 +123,9 @@ $ git commit -m 'Initial commit.'
 ```
 
 ## Notes
+
+The templates may not be suitable for everyone. Be sure to inspect them and remove anything
+that does not apply to your project.
 
 Due to the locking implementation in `BunnyBurrow::Client#publish`, there is the potential for a
 deadlock if the same client is used to publish on separate threads. If that behavior is

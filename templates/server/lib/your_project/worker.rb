@@ -12,23 +12,25 @@ module YourProject
     end
 
     def run
-      rpc_server.subscribe(ROUTING_KEY_ONE) do |payload|
+      rpc_server.subscribe(ROUTING_KEY_ONE) do |request|
         begin
+          request = JSON.parse(request)
           response = BunnyBurrow::Server.create_response
-          response[:data] = method_one(payload)
+          response[:data] = method_one(request)
         rescue => exception
-          handle_exception exception, response
+          handle_exception exception, request, response
         end
 
         response
       end
 
-      rpc_server.subscribe(ROUTING_KEY_TWO) do |payload|
+      rpc_server.subscribe(ROUTING_KEY_TWO) do |request|
         begin
+          request = JSON.parse(request)
           response = BunnyBurrow::Server.create_response
-          response[:data] = method_two(payload)
+          response[:data] = method_two(request)
         rescue => exception
-          handle_exception exception, response
+          handle_exception exception, request, response
         end
 
         response
@@ -37,13 +39,11 @@ module YourProject
       rpc_server.wait
     end
 
-    def method_one(payload)
-      payload = JSON.parse(payload)
+    def method_one(request)
       { message: "method_one executed" }
     end
 
-    def method_two(payload)
-      payload = JSON.parse(payload)
+    def method_two(request)
       { message: "method_two executed" }
     end
 
@@ -61,15 +61,17 @@ module YourProject
       end
     end
 
-    def handle_exception(exception, response)
-      response[:error_message] = exception.message
-      response[:status] =
-        case exception.class
-          when YourClientError
-            BunnyBurrow::STATUS_CLIENT_ERROR
-          else
-            BunnyBurrow::STATUS_SERVER_ERROR
-        end
+    def handle_exception(exception, request, response)
+      if exception.class == YourClientError
+        response[:status] = BunnyBurrow::STATUS_CLIENT_ERROR
+        response[:data][:status] = exception.message.downcase.gsub(' ', '_')
+        message = 'create-appropriate-message-here'
+        Raven.capture_message message, tags: request
+      else
+        response[:status] = BunnyBurrow::STATUS_SERVER_ERROR
+        response[:error_message] = exception.message
+        Raven.capture_exception exception, tags: request
+      end
     end
   end
 end

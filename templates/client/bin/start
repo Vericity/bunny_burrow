@@ -8,7 +8,20 @@ require 'your_project/worker'
 
 context = EnvHashConfig.create
 worker = YourProject::Worker.new(context)
-worker.run
+
+Signal.trap('INT') do
+  throw :ctrl_c
+end
+
+Signal.trap('TERM') do
+  throw :ctrl_c
+end
+
+$stdout.sync = true
+
+catch :ctrl_c do
+  worker.run
+end
 
 at_exit do
   worker.shutdown
