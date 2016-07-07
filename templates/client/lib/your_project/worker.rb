@@ -26,6 +26,7 @@ module YourProject
       @rpc_client ||= BunnyBurrow::Client.new do |client|
         client.rabbitmq_url = context.rabbitmq_url
         client.rabbitmq_exchange = context.rabbitmq_exchange
+        STDOUT.sync = true
         client.logger = Logger.new(STDOUT)
       end
     end
