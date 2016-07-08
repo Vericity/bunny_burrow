@@ -10,8 +10,8 @@ module BunnyBurrow
       }
     end
 
-    def subscribe(routing_key, &block)
-      queue = channel.queue('', exclusive: true, auto_delete: true)
+    def subscribe(routing_key, queue_name = routing_key, &block)
+      queue = channel.queue(queue_name, exclusive: false, auto_delete: true)
       queue.bind(topic_exchange, routing_key: routing_key)
 
       details = {
