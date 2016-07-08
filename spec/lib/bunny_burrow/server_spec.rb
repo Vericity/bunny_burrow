@@ -44,6 +44,7 @@ describe BunnyBurrow::Server do
     let(:payload)          { { key: 'value' }.to_json }
     let(:properties)       { double 'properties', reply_to: 'reply.to' }
     let(:queue)            { double 'queue' }
+    let(:queue_name)       { routing_key }
     let(:reply_options)    { { routing_key: properties.reply_to, persistence: false } }
     let(:response)         { { status: BunnyBurrow::STATUS_OK, error_message: nil, data: nil } }
     let(:routing_key)      { 'routing.key' }
@@ -67,10 +68,17 @@ describe BunnyBurrow::Server do
     it 'creates a queue on the topic exchange bound to the routing key' do
       options = {
         auto_delete: true,
-        exclusive: true
+        exclusive: false
       }
-      expect(channel).to receive(:queue).with('', hash_including(options))
+      expect(channel).to receive(:queue).with(queue_name, hash_including(options))
       expect(queue).to receive(:bind).with(topic_exchange, hash_including(routing_key: routing_key))
+      subject.subscribe routing_key, &block
+    end
+
+    it 'replaces wildcards in the routing key with a string' do
+      routing_key = 'routing.*.key'
+      queue_name = 'routing.all.key'
+      expect(channel).to receive(:queue).with(queue_name, anything)
       subject.subscribe routing_key, &block
     end
 
