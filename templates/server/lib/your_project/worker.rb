@@ -5,10 +5,10 @@ module YourProject
     ROUTING_KEY_ONE = 'some.routing.key.one'
     ROUTING_KEY_TWO = 'some.routing.key.two'
 
-    attr_reader :context
+    attr_reader :config
 
-    def initialize(context)
-      @context = context
+    def initialize(config)
+      @config = config
     end
 
     def run
@@ -55,8 +55,21 @@ module YourProject
 
     def rpc_server
       @rpc_server ||= BunnyBurrow::Server.new do |server|
-        server.rabbitmq_url = context.rabbitmq_url
-        server.rabbitmq_exchange = context.rabbitmq_exchange
+        server.tls_cert = config.rabbitmq_tls_cert
+        server.tls_key = config.rabbitmq_tls_key
+
+        tls_ca_certs = (config.rabbitmq_tls_ca_certs || '').split(',')
+        server.tls_ca_certs = tls_ca_certs if tls_ca.certs.any?
+
+        server.verify_peer = (config.rabbitmq_verify_peer || 'false') == 'true'
+
+        server.rabbitmq_url = config.rabbitmq_url
+        server.rabbitmq_exchange = config.rabbitmq_exchange
+        server.log_prefix = config.bunny_burrow_log_prefix || 'SERVER'
+        server.log_request = config.bunny_burrow_log_request || false
+        server.log_response = config.bunny_burrow_log_response || false
+        server.timeout = config.bunny_burrow_timeout || 60
+
         STDOUT.sync = true
         server.logger = Logger.new(STDOUT)
       end

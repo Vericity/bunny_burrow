@@ -8,7 +8,19 @@ module BunnyBurrow
   STATUS_SERVER_ERROR = 'server_error'
 
   class Base
-    attr_accessor :rabbitmq_url, :rabbitmq_exchange, :logger, :log_prefix, :verify_peer, :timeout, :log_request, :log_response
+    attr_accessor(
+      :log_prefix,
+      :log_request,
+      :log_response,
+      :logger,
+      :rabbitmq_exchange,
+      :rabbitmq_url,
+      :timeout,
+      :tls_ca_certs,
+      :tls_cert,
+      :tls_key,
+      :verify_peer
+    )
 
     alias_method :verify_peer?, :verify_peer
     alias_method :log_request?, :log_request
@@ -34,8 +46,13 @@ module BunnyBurrow
     private
 
     def connection
+      options = { verify_peer: verify_peer? }
+      options[:tls_cert] = tls_cert if tls_cert
+      options[:tls_key] = tls_key if tls_key
+      options[:tls_ca_certs] = tls_ca_certs if tls_ca_certs
+
       unless @connection
-        @connection = Bunny.new(rabbitmq_url, verify_peer: @verify_peer)
+        @connection = Bunny.new(rabbitmq_url, options)
         @connection.start
       end
 
