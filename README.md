@@ -1,5 +1,7 @@
 # BunnyBurrow
 
+[![Build Status](https://travis-ci.org/johann-koebbe/bunny_burrow.svg)](http://travis-ci.org/johann-koebbe/bunny_burrow)
+
 BunnyBurrow is a simple approach to RPC over RabbitMQ via the Bunny gem.
 A 'server' application listens on one ore more queues on a topic exchange
 while a 'client' publishes to a single queue on the same exchange.

@@ -1,9 +1,13 @@
 require 'spec_helper'
 
 describe BunnyBurrow::Base do
-  describe 'default initialization' do
-    subject { described_class.new }
+  let(:tls_cert)     { 'tls-cert' }
+  let(:tls_key)      { 'tls-key' }
+  let(:tls_ca_certs) { [ 'tls-ca-cert' ] }
 
+  subject { described_class.new }
+
+  describe 'default initialization' do
     it 'yields if a block is given' do
       expect { |b| described_class.new &b }.to yield_control
     end
@@ -31,10 +35,10 @@ describe BunnyBurrow::Base do
   end # describe 'default initialization'
 
   describe 'custom initialization' do
-    let(:rabbitmq_url)      { 'rabbitmq_url' }
-    let(:rabbitmq_exchange) { 'rabbitmq_exchange' }
-    let(:logger)            { 'logger' }
-    let(:log_prefix)        { 'log_prefix' }
+    let(:rabbitmq_url)      { 'rabbitmq-url' }
+    let(:rabbitmq_exchange) { 'rabbitmq-exchange' }
+    let(:logger)            { instance_double 'Logger' }
+    let(:log_prefix)        { 'log-prefix' }
     let(:timeout)           { rand(60) + 1 }
 
     subject do
@@ -47,6 +51,9 @@ describe BunnyBurrow::Base do
         dc.log_request = true
         dc.log_response = true
         dc.verify_peer = false
+        dc.tls_cert = tls_cert
+        dc.tls_key = tls_key
+        dc.tls_ca_certs = tls_ca_certs
       end
     end
 
@@ -81,6 +88,18 @@ describe BunnyBurrow::Base do
     it 'allows verify_peer to be set' do
       expect(subject.verify_peer?).to be_falsey
     end
+
+    it 'allows tls_cert to be set' do
+      expect(subject.tls_cert).to eq(tls_cert)
+    end
+
+    it 'allows tls_key to be set' do
+      expect(subject.tls_key).to eq(tls_key)
+    end
+
+    it 'allows tls_ca_certs to be set' do
+      expect(subject.tls_ca_certs).to eq(tls_ca_certs)
+    end
   end # describe 'custom initialization'
 
   describe 'instance' do
@@ -95,122 +114,200 @@ describe BunnyBurrow::Base do
     let(:message)            { 'some log message' }
     let(:topic_exchange)     { double 'topic exchange' }
 
-    subject { described_class.new }
+    describe '#connection' do
+      before(:each) do
+        subject.instance_variable_set('@connection', nil)
+        allow(subject).to receive(:tls_cert).and_return(tls_cert)
+        allow(subject).to receive(:tls_key).and_return(tls_key)
+        allow(subject).to receive(:tls_ca_certs).and_return(tls_ca_certs)
+        allow(subject).to receive(:verify_peer?).and_return(true)
+        allow(connection).to receive(:start)
+        allow(Bunny).to receive(:new).and_return(connection)
+      end
 
-    before(:each) do
-      subject.instance_variable_set('@connection', connection)
-      subject.instance_variable_set('@channel', channel)
-      allow(subject).to receive(:logger).and_return(logger)
-    end
+      it 'creates a connection when one does not exist' do
+        expect(Bunny).to receive(:new)
+        subject.send :connection
+      end
 
-    it 'creates a connection when one does not exist' do
-      allow(connection).to receive(:start)
-      subject.instance_variable_set('@connection', nil)
-      expect(Bunny).to receive(:new).and_return(connection)
-      subject.send :connection
-    end
+      it 'sets verify_peer to true by default' do
+        expect(Bunny).to receive(:new).with(anything, hash_including(verify_peer: true))
+        subject.send :connection
+      end
 
-    it 'sets verify_peer on the connection' do
-      allow(connection).to receive(:start)
-      subject.instance_variable_set('@connection', nil)
-      expect(Bunny).to receive(:new).and_return(connection).with(anything, verify_peer: true)
-      subject.send :connection
-    end
+      it 'can set verify_peer to false' do
+        allow(subject).to receive(:verify_peer?).and_return(false)
+        expect(Bunny).to receive(:new).with(anything, hash_including(verify_peer: false))
+        subject.send :connection
+      end
 
-    it 'uses an existing connection' do
-      expect(Bunny).not_to receive(:new)
-      expect(connection).not_to receive(:start)
-      subject.send :connection
-    end
+      it 'sets tls_cert when present' do
+        expect(Bunny).to receive(:new).with(anything, hash_including(tls_cert: tls_cert))
+        subject.send :connection
+      end
 
-    it 'creates a channel when one does not exist' do
-      subject.instance_variable_set('@channel', nil)
-      expect(connection).to receive(:create_channel)
-      subject.send :channel
-    end
+      it 'does not set tls_cert when not present' do
+        allow(subject).to receive(:tls_cert).and_return(nil)
+        expect(Bunny).to receive(:new).with(anything, hash_excluding(tls_cert: tls_cert))
+        subject.send :connection
+      end
 
-    it 'uses an existing channel' do
-      expect(connection).not_to receive(:create_channel)
-      subject.send :channel
-    end
+      it 'sets tls_key when present' do
+        expect(Bunny).to receive(:new).with(anything, hash_including(tls_key: tls_key))
+        subject.send :connection
+      end
 
-    it 'creates a default exchange variable when one does not exist' do
-      expect(channel).to receive(:default_exchange)
-      subject.send :default_exchange
-    end
+      it 'does not set tls_key when not present' do
+        allow(subject).to receive(:tls_key).and_return(nil)
+        expect(Bunny).to receive(:new).with(anything, hash_excluding(tls_key: tls_key))
+        subject.send :connection
+      end
 
-    it 'uses an existing default exchange variable' do
-      subject.instance_variable_set('@default_exchange', default_exchange)
-      expect(channel).not_to receive(:default_exchange)
-      subject.send :default_exchange
-    end
+      it 'sets tls_ca_certs when present' do
+        expect(Bunny).to receive(:new).with(anything, hash_including(tls_ca_certs: tls_ca_certs))
+        subject.send :connection
+      end
 
-    it 'creates a topic exchange when one does not exist' do
-      expect(channel).to receive(:topic)
-      subject.send :topic_exchange
-    end
+      it 'does not set tls_ca_certs when not present' do
+        allow(subject).to receive(:tls_ca_certs).and_return(nil)
+        expect(Bunny).to receive(:new).with(anything, hash_excluding(tls_ca_certs: tls_ca_certs))
+        subject.send :connection
+      end
 
-    it 'uses an existing topic exchange' do
-      subject.instance_variable_set('@topic_exchange', topic_exchange)
-      expect(channel).not_to receive(:topic)
-      subject.send :topic_exchange
-    end
+      it 'starts the connection' do
+        expect(connection).to receive(:start)
+        subject.send :connection
+      end
 
-    it 'creates a lock when one does not exist' do
-      subject.instance_variable_set('@lock', nil)
-      expect(Mutex).to receive(:new)
-      subject.send :lock
-    end
+      it 'uses an existing connection' do
+        subject.instance_variable_set('@connection', connection)
+        expect(Bunny).not_to receive(:new)
+        expect(connection).not_to receive(:start)
+        subject.send :connection
+      end
+    end # describe '#connection'
 
-    it 'uses an existing lock' do
-      subject.instance_variable_set('@lock', lock)
-      expect(Mutex).not_to receive(:new)
-      subject.send :lock
-    end
+    describe '#channel' do
+      before(:each) do
+        allow(subject).to receive(:connection).and_return(connection)
+        subject.instance_variable_set('@channel', nil)
+      end
 
-    it 'creates a condition when one does not exist' do
-      subject.instance_variable_set('@condition', nil)
-      expect(ConditionVariable).to receive(:new)
-      subject.send :condition
-    end
+      it 'creates a channel when one does not exist' do
+        expect(connection).to receive(:create_channel)
+        subject.send :channel
+      end
 
-    it 'uses an existing condition variable' do
-      subject.instance_variable_set('@condition', condition)
-      expect(ConditionVariable).not_to receive(:new)
-      subject.send :condition
-    end
+      it 'uses an existing channel' do
+        subject.instance_variable_set('@channel', channel)
+        expect(connection).not_to receive(:create_channel)
+        subject.send :channel
+      end
+    end # describe '#channel'
 
-    it 'does not log if no logger' do
-      allow(subject).to receive(:logger).and_return(nil)
-      expect { subject.send :log, message }.not_to raise_error
-    end
+    describe '#default_exchange' do
+      before(:each) do
+        allow(subject).to receive(:channel).and_return(channel)
+        allow(channel).to receive(:default_exchange)
+        subject.instance_variable_set('@default_exchange', nil)
+      end
 
-    it 'logs when there is a logger' do
-      expect(logger).to receive(default_log_level)
-      subject.send :log, message
-    end
+      it 'creates a default exchange when one does not exist' do
+        expect(channel).to receive(:default_exchange)
+        subject.send :default_exchange
+      end
 
-    it 'defaults log prefix' do
-      expect(logger).to receive(default_log_level).with("#{default_log_prefix}: #{message}")
-      subject.send :log, message
-    end
+      it 'uses an existing default exchange' do
+        subject.instance_variable_set('@default_exchange', default_exchange)
+        expect(channel).not_to receive(:default_exchange)
+        subject.send :default_exchange
+      end
+    end # describe '#default_exchange'
 
-    it 'uses configured log prefix' do
-      log_prefix = 'Flibby'
-      allow(subject).to receive(:log_prefix).and_return(log_prefix)
-      expect(logger).to receive(default_log_level).with("#{log_prefix}: #{message}")
-      subject.send :log, message
-    end
+    describe '#topic_exchange' do
+      before(:each) do
+        allow(subject).to receive(:channel).and_return(channel)
+        allow(channel).to receive(:topic)
+        subject.instance_variable_set('@topic_exchange', nil)
+      end
 
-    it 'defaults log level to :info' do
-      expect(logger).to receive(default_log_level)
-      subject.send :log, message
-    end
+      it 'creates a topic exchange when one does not exist' do
+        expect(channel).to receive(:topic)
+        subject.send :topic_exchange
+      end
 
-    it 'allows other log levels' do
-      log_level = :warn
-      expect(logger).to receive(log_level)
-      subject.send :log, message, level: log_level
-    end
+      it 'uses an existing topic exchange' do
+        subject.instance_variable_set('@topic_exchange', topic_exchange)
+        expect(channel).not_to receive(:topic)
+        subject.send :topic_exchange
+      end
+    end # describe '#topic_exchange'
+
+    describe '#lock' do
+      it 'creates a lock when one does not exist' do
+        subject.instance_variable_set('@lock', nil)
+        expect(Mutex).to receive(:new)
+        subject.send :lock
+      end
+
+      it 'uses an existing lock' do
+        subject.instance_variable_set('@lock', lock)
+        expect(Mutex).not_to receive(:new)
+        subject.send :lock
+      end
+    end # describe '#lock'
+
+    describe '#condition' do
+      it 'creates a condition when one does not exist' do
+        subject.instance_variable_set('@condition', nil)
+        expect(ConditionVariable).to receive(:new)
+        subject.send :condition
+      end
+
+      it 'uses an existing condition variable' do
+        subject.instance_variable_set('@condition', condition)
+        expect(ConditionVariable).not_to receive(:new)
+        subject.send :condition
+      end
+    end # describe '#condition'
+
+    describe '#log' do
+      before(:each) do
+        allow(subject).to receive(:logger).and_return(logger)
+      end
+
+      it 'does not log if no logger' do
+        allow(subject).to receive(:logger).and_return(nil)
+        expect { subject.send :log, message }.not_to raise_error
+      end
+
+      it 'logs when there is a logger' do
+        expect(logger).to receive(default_log_level)
+        subject.send :log, message
+      end
+
+      it 'defaults log prefix' do
+        expect(logger).to receive(default_log_level).with("#{default_log_prefix}: #{message}")
+        subject.send :log, message
+      end
+
+      it 'uses configured log prefix' do
+        log_prefix = 'Flibby'
+        allow(subject).to receive(:log_prefix).and_return(log_prefix)
+        expect(logger).to receive(default_log_level).with("#{log_prefix}: #{message}")
+        subject.send :log, message
+      end
+
+      it 'defaults log level to :info' do
+        expect(logger).to receive(default_log_level)
+        subject.send :log, message
+      end
+
+      it 'allows other log levels' do
+        log_level = :warn
+        expect(logger).to receive(log_level)
+        subject.send :log, message, level: log_level
+      end
+    end # describe '#log'
   end # describe 'instance'
 end
