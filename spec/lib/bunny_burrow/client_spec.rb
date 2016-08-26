@@ -119,26 +119,9 @@ describe BunnyBurrow::Client do
       allow(subject).to receive(:log)
     end
 
-    it 'logs shutting down' do
-      expect(subject).to receive(:log).with('Shutting down')
+    it 'shuts down' do
       subject.shutdown
-    end
-
-    it 'closes the channel' do
-      expect(channel).to receive(:close)
-      subject.shutdown
-    end
-
-    it 'closes the connection' do
-      expect(connection).to receive(:close)
-      subject.shutdown
-    end
-
-    it 'does not try to shutdown if already shutdown' do
-      subject.instance_variable_set('@shutdown', true)
-      expect(channel).not_to receive(:close)
-      expect(connection).not_to receive(:close)
-      subject.shutdown
+      expect(subject.instance_variable_get('@shutdown')).to be_truthy
     end
   end # describe '#shutdown'
 end # describe BunnyBurrow::Client
