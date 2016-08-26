@@ -28,11 +28,17 @@ describe BunnyBurrow::Base do
     it 'defaults verify_peer to true' do
       expect(subject.verify_peer?).to be true
     end
+
+    it 'defaults own_connection to true' do
+      expect(subject.instance_variable_get('@own_connection')).to be(true)
+      expect(subject.instance_variable_get('@connection')).to be_nil
+    end
   end # describe 'default initialization'
 
   describe 'custom initialization' do
     let(:rabbitmq_url)      { 'rabbitmq_url' }
     let(:rabbitmq_exchange) { 'rabbitmq_exchange' }
+    let(:rabbitmq_connection) { double 'connection' }
     let(:logger)            { 'logger' }
     let(:log_prefix)        { 'log_prefix' }
     let(:timeout)           { rand(60) + 1 }
@@ -41,6 +47,7 @@ describe BunnyBurrow::Base do
       described_class.new do |dc|
         dc.rabbitmq_url = rabbitmq_url
         dc.rabbitmq_exchange = rabbitmq_exchange
+        dc.rabbitmq_connection = rabbitmq_connection
         dc.logger = logger
         dc.log_prefix = log_prefix
         dc.timeout = timeout
@@ -56,6 +63,12 @@ describe BunnyBurrow::Base do
 
     it 'allows rabbitmq_exchange to be set' do
       expect(subject.rabbitmq_exchange).to eq(rabbitmq_exchange)
+    end
+
+    it 'allows rabbitmq_connection to be set' do
+      expect(subject.rabbitmq_connection).to eq(rabbitmq_connection)
+      expect(subject.instance_variable_get('@connection')).to eq(rabbitmq_connection)
+      expect(subject.instance_variable_get('@own_connection')).to be(false)
     end
 
     it 'allows logger to be set' do
@@ -212,5 +225,45 @@ describe BunnyBurrow::Base do
       expect(logger).to receive(log_level)
       subject.send :log, message, level: log_level
     end
+
+    describe '#shutdown' do
+      before(:each) do
+        allow(channel).to receive(:close)
+        allow(connection).to receive(:close)
+        allow(subject).to receive(:connection).and_return(connection)
+        allow(subject).to receive(:channel).and_return(channel)
+        allow(subject).to receive(:log)
+      end
+
+      it 'logs shutting down' do
+        expect(subject).to receive(:log).with('Shutting down')
+        subject.shutdown
+      end
+
+      it 'closes the channel' do
+        expect(channel).to receive(:close)
+        subject.shutdown
+      end
+
+      it 'closes owned connection' do
+        subject.instance_variable_set('@own_connection', true)
+        expect(connection).to receive(:close)
+        subject.shutdown
+      end
+
+      it 'does not close shared connection' do
+        subject.instance_variable_set('@own_connection', false)
+        expect(connection).not_to receive(:close)
+        subject.shutdown
+      end
+
+      it 'does not try to shutdown if already shutdown' do
+        subject.instance_variable_set('@shutdown', true)
+        expect(channel).not_to receive(:close)
+        expect(connection).not_to receive(:close)
+        subject.shutdown
+      end
+    end # describe '#shutdown'
+
   end # describe 'instance'
 end
