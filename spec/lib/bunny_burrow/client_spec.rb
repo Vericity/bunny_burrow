@@ -31,7 +31,7 @@ describe BunnyBurrow::Client do
       allow(reply_to).to receive(:subscribe).and_yield({}, {}, response)
       allow(subject).to receive(:condition).and_return(condition)
       allow(subject).to receive(:log)
-      allow(channel).to receive(:queue).with("", {:exclusive=>true, :auto_delete=>true}).and_return(reply_to)
+      allow(channel).to receive(:queue).and_return(reply_to)
       allow(topic_exchange).to receive(:publish)
     end
 
