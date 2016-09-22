@@ -1,3 +1,9 @@
+# Use Dotenv to load the environment when executing with IntelliJ.
+if ENV['RM_INFO']
+  require 'dotenv'
+  Dotenv.load File.expand_path('../../.env.test', __FILE__)
+end
+
 require 'pry'
 require 'simplecov'
 require 'simplecov-rcov'
