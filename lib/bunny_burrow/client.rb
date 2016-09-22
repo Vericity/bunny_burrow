@@ -5,6 +5,11 @@ module BunnyBurrow
     def publish(payload, routing_key)
       result = nil
 
+      # when creating a queue, a blank name indicates we want the AMPQ broker
+      # to generate a unique name for us. Also note that this queue will be on
+      # the default exchange
+      reply_to = channel.queue('', exclusive: true, auto_delete: true)
+
       details = {
         routing_key: routing_key,
         reply_to: reply_to
@@ -32,15 +37,6 @@ module BunnyBurrow
       end
 
       result
-    end
-
-    private
-
-    def reply_to
-      # when creating a queue, a blank name indicates we want the AMPQ broker
-      # to generate a unique name for us. Also note that this queue will be on
-      # the default exchange
-      @reply_to ||= channel.queue('', exclusive: true, auto_delete: true)
     end
   end
 end

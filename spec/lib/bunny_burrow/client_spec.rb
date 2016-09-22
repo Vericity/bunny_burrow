@@ -16,21 +16,7 @@ describe BunnyBurrow::Client do
       expect(subject.class.ancestors).to include(BunnyBurrow::Base)
     end
 
-    it 'creates a reply-to queue if one does not exist' do
-      subject.instance_variable_set('@reply_to', nil)
-      options = {
-        exclusive: true,
-        auto_delete: true
-      }
-      expect(channel).to receive(:queue).with('', hash_including(options))
-      subject.send :reply_to
-    end
 
-    it 'uses existing reply-to queue' do
-      subject.instance_variable_set('@reply_to', reply_to)
-      expect(channel).not_to receive(:queue)
-      subject.send :reply_to
-    end
   end # describe 'instance'
 
   describe '#publish' do
@@ -45,7 +31,7 @@ describe BunnyBurrow::Client do
       allow(reply_to).to receive(:subscribe).and_yield({}, {}, response)
       allow(subject).to receive(:condition).and_return(condition)
       allow(subject).to receive(:log)
-      allow(subject).to receive(:reply_to).and_return(reply_to)
+      allow(channel).to receive(:queue).and_return(reply_to)
       allow(topic_exchange).to receive(:publish)
     end
 
@@ -68,6 +54,15 @@ describe BunnyBurrow::Client do
     it 'logs publishing details with the request' do
       allow(subject).to receive(:log_request?).and_return(true)
       expect(subject).to receive(:log).with(/^Publishing(?=.*request).*/)
+      subject.publish request, routing_key
+    end
+
+    it 'creates a reply-to queue ' do
+      options = {
+        exclusive: true,
+        auto_delete: true
+      }
+      expect(channel).to receive(:queue).with('', hash_including(options))
       subject.publish request, routing_key
     end
 
