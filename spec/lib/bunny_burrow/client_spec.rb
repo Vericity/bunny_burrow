@@ -97,7 +97,6 @@ describe BunnyBurrow::Client do
     end
 
     it 'does not rescue unexpected errors' do
-      allow(reply_to).to receive(:subscribe).and_raise(Timeout::Error.new)
       allow(subject).to receive(:log_request?).and_raise(RuntimeError.new)
       # expect it to get all the way up
       expect { subject.publish request, routing_key }.to raise_error(RuntimeError)
