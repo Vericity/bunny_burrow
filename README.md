@@ -138,7 +138,7 @@ Then, run `bundle exec rspec` to run the tests.
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/johann-koebbe/bunny_burrow.
+Bug reports and pull requests are welcome on GitHub at https://github.com/peejaybee/bunny_burrow.
 
 ## License
 

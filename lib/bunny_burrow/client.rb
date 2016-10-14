@@ -36,6 +36,7 @@ module BunnyBurrow
         lock.synchronize { condition.wait(lock) }
       end
 
+      reply_to.delete
       result
     end
   end
