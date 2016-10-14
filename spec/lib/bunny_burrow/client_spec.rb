@@ -28,6 +28,7 @@ describe BunnyBurrow::Client do
 
     before(:each) do
       allow(channel).to receive(:topic).and_return(topic_exchange)
+      allow(reply_to).to receive(:delete)
       allow(reply_to).to receive(:subscribe).and_yield({}, {}, response)
       allow(subject).to receive(:condition).and_return(condition)
       allow(subject).to receive(:log)
@@ -96,9 +97,16 @@ describe BunnyBurrow::Client do
     end
 
     it 'does not rescue unexpected errors' do
+      allow(reply_to).to receive(:subscribe).and_raise(Timeout::Error.new)
       allow(subject).to receive(:log_request?).and_raise(RuntimeError.new)
       # expect it to get all the way up
       expect { subject.publish request, routing_key }.to raise_error(RuntimeError)
+    end
+
+    it 'deletes the queue' do
+      expect(reply_to).to receive(:delete)
+
+      subject.publish request, routing_key
     end
   end # describe '#publish'
 
