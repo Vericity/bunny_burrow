@@ -102,10 +102,32 @@ describe BunnyBurrow::Client do
       expect { subject.publish request, routing_key }.to raise_error(RuntimeError)
     end
 
-    it 'deletes the queue' do
-      expect(reply_to).to receive(:delete)
+    describe 'reply to queue clean up' do
+      it 'deletes the queue' do
+        expect(reply_to).to receive(:delete)
 
-      subject.publish request, routing_key
+        subject.publish request, routing_key
+      end
+
+      context 'the queue could not be created' do
+        it 'does not delete' do
+          allow(channel).to receive(:queue).and_raise(RuntimeError.new)
+
+          expect(reply_to).to_not receive(:delete)
+
+          subject.publish request, routing_key rescue RuntimeError
+        end
+      end
+
+      context 'an exception occurred' do
+        it 'still deletes the queue' do
+          allow(reply_to).to receive(:subscribe).and_raise(Timeout::Error.new)
+
+          expect(reply_to).to receive(:delete)
+
+          subject.publish request, routing_key rescue Timeout::Error
+        end
+      end
     end
   end # describe '#publish'
 
