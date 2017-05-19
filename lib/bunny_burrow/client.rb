@@ -36,8 +36,9 @@ module BunnyBurrow
         lock.synchronize { condition.wait(lock) }
       end
 
-      reply_to.delete
-      result
+       result
+    ensure
+      reply_to.delete if reply_to
     end
   end
 end
