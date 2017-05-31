@@ -42,10 +42,10 @@ describe BunnyBurrow::Server do
     let(:default_exchange) { double 'default exchange' }
     let(:delivery_info)    { double 'delivery info', delivery_tag: 'some-tag' }
     let(:payload)          { { key: 'value' }.to_json }
-    let(:properties)       { double 'properties', reply_to: 'reply.to' }
+    let(:properties)       { double 'properties', reply_to: 'reply.to', correlation_id: 'correlation-id' }
     let(:queue)            { double 'queue' }
     let(:queue_name)       { 'this-is-my-queue-name' }
-    let(:reply_options)    { { routing_key: properties.reply_to, persistence: false } }
+    let(:reply_options)    { { routing_key: properties.reply_to, correlation_id: properties.correlation_id, persistence: false } }
     let(:response)         { { status: BunnyBurrow::STATUS_OK, error_message: nil, data: nil } }
     let(:routing_key)      { 'routing.key' }
     let(:topic_exchange)   { double 'topic exchange' }
