@@ -1,12 +1,13 @@
 require 'spec_helper'
 
 describe BunnyBurrow::Client do
-  let(:channel)  { double 'channel' }
-  let(:reply_to) { double 'reply to', name: 'reply.to' }
+  let(:connection) {double 'Bunny', :start => nil }
+  let(:channel)  { double 'channel', :queue => reply_to }
+  let(:reply_to) { double 'reply to', name: 'reply.to', :subscribe => nil }
 
   before(:each) do
-    allow(subject).to receive(:channel).and_return(channel)
-    allow(subject).to receive(:timeout).and_return(1)
+    allow(Bunny).to receive(:new).and_return(connection)
+    allow(connection).to receive(:create_channel).and_return(channel)
   end
 
   subject { described_class.new }
@@ -139,8 +140,6 @@ describe BunnyBurrow::Client do
   end # describe '#publish'
 
   describe '#shutdown' do
-    let(:connection) { double 'Bunny' }
-    let(:channel)    { double 'channel' }
 
     before(:each) do
       allow(channel).to receive(:close)
