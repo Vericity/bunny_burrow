@@ -29,9 +29,9 @@ module BunnyBurrow
           }
 
           reply_options = {
-              routing_key: properties.reply_to,
-              correlation_id: properties.correlation_id,
-              persistence: false
+            routing_key: properties.reply_to,
+            correlation_id: properties.correlation_id,
+            persistence: false
           }
 
           details[:request] = payload if log_request?
