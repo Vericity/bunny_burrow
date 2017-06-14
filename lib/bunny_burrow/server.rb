@@ -28,6 +28,12 @@ module BunnyBurrow
             properties: properties
           }
 
+          reply_options = {
+            routing_key: properties.reply_to,
+            correlation_id: properties.correlation_id,
+            persistence: false
+          }
+
           details[:request] = payload if log_request?
           log "Receiving #{details}"
 
@@ -36,7 +42,7 @@ module BunnyBurrow
           details[:response] = response if log_response?
 
           log "Replying #{details}"
-          default_exchange.publish(response.to_json, :routing_key => properties.reply_to, persistence: false)
+          default_exchange.publish(response.to_json, reply_options)
 
           log "Acknowledging #{details}"
           channel.ack delivery_info.delivery_tag
@@ -46,7 +52,7 @@ module BunnyBurrow
             status: STATUS_SERVER_ERROR,
             error_message: e.message
           }
-          default_exchange.publish(response.to_json, :routing_key => properties.reply_to, persistence: false)
+          default_exchange.publish(response.to_json, reply_options)
         end
       end
     rescue => e
