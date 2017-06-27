@@ -1,12 +1,15 @@
 require 'spec_helper'
 
 describe BunnyBurrow::Client do
-  let(:channel)  { double 'channel' }
-  let(:reply_to) { double 'reply to', name: 'reply.to' }
+  let(:channel)   { double 'channel' }
+  let(:lock)      { double 'Mutex', synchronize: true, wait: false }
+  let(:condition) { double 'condition', signal: true, wait: false }
+  let(:response)  { { answer: 'the thing you asked for' } }
 
   before(:each) do
     allow(subject).to receive(:channel).and_return(channel)
     allow(subject).to receive(:timeout).and_return(1)
+    allow(subject).to receive(:lock).and_return(lock)
   end
 
   subject { described_class.new }
@@ -20,26 +23,24 @@ describe BunnyBurrow::Client do
   end # describe 'instance'
 
   describe '#publish' do
-    let(:condition)      { double 'condition', signal: true, wait: false }
+    let(:consumer)       { double Bunny::Consumer, cancel: nil }
     let(:request)        { { question: 'gimme the thing' } }
-    let(:response)       { { answer: 'the thing you asked for' } }
     let(:routing_key)    { 'routing.key' }
     let(:topic_exchange) { double 'topic exchange' }
 
     before(:each) do
+      allow(Bunny::Consumer).to receive(:new).and_return(consumer)
+      allow(consumer).to receive(:on_delivery)
       allow(channel).to receive(:topic).and_return(topic_exchange)
-      allow(reply_to).to receive(:delete)
-      allow(reply_to).to receive(:subscribe).and_yield({}, {}, response)
-      allow(subject).to receive(:condition).and_return(condition)
+      allow(channel).to receive(:basic_consume_with)
       allow(subject).to receive(:log)
-      allow(channel).to receive(:queue).and_return(reply_to)
       allow(topic_exchange).to receive(:publish)
     end
 
     it 'publishes the request on the topic exchange' do
       options = {
         routing_key: routing_key,
-        reply_to: reply_to.name,
+        reply_to: BunnyBurrow::Client::DIRECT_REPLY_TO,
         persistence: false
       }
       expect(topic_exchange).to receive(:publish).with(request.to_json, hash_including(options))
@@ -58,40 +59,8 @@ describe BunnyBurrow::Client do
       subject.publish request, routing_key
     end
 
-    it 'creates a reply-to queue ' do
-      options = {
-        exclusive: true,
-        auto_delete: true
-      }
-      expect(channel).to receive(:queue).with('', hash_including(options))
-      subject.publish request, routing_key
-    end
-
-    it 'subscribes to the reply-to queue' do
-      expect(reply_to).to receive(:subscribe)
-      subject.publish request, routing_key
-    end
-
-    it 'logs receiving details without the response' do
-      allow(subject).to receive(:log_response?).and_return(false)
-      expect(subject).to receive(:log).with(/^Receiving(?!.*response).*/)
-      subject.publish request, routing_key
-    end
-
-    it 'logs receiving details with the response' do
-      allow(subject).to receive(:log_response?).and_return(true)
-      expect(subject).to receive(:log).with(/^Receiving(?=.*response).*/)
-      subject.publish request, routing_key
-    end
-
-    it 'returns the response' do
-      allow(subject).to receive(:timeout).and_return(5)
-      result = subject.publish(request, routing_key)
-      expect(result).to eq(response)
-    end
-
     it 'does not rescue timeout errors' do
-      allow(reply_to).to receive(:subscribe).and_raise(Timeout::Error.new)
+      allow(lock).to receive(:synchronize).and_raise(Timeout::Error.new)
       # expect it to get all the way up
       expect { subject.publish request, routing_key }.to raise_error(Timeout::Error)
     end
@@ -102,34 +71,54 @@ describe BunnyBurrow::Client do
       expect { subject.publish request, routing_key }.to raise_error(RuntimeError)
     end
 
-    describe 'reply to queue clean up' do
-      it 'deletes the queue' do
-        expect(reply_to).to receive(:delete)
-
+    context 'consumer' do
+      it 'creates a consumer to consume the reply-to pseudo-queue' do
+        expect(Bunny::Consumer).to receive(:new).with(channel, BunnyBurrow::Client::DIRECT_REPLY_TO, an_instance_of(String))
         subject.publish request, routing_key
       end
 
-      context 'the queue could not be created' do
-        it 'does not delete' do
-          allow(channel).to receive(:queue).and_raise(RuntimeError.new)
-
-          expect(reply_to).to_not receive(:delete)
-
-          subject.publish request, routing_key rescue RuntimeError
-        end
+      it 'consumes the direct reply-to pseudo-queue' do
+        expect(channel).to receive(:basic_consume_with).with(consumer)
+        subject.publish request, routing_key
       end
 
-      context 'an exception occurred' do
-        it 'still deletes the queue' do
-          allow(reply_to).to receive(:subscribe).and_raise(Timeout::Error.new)
-
-          expect(reply_to).to receive(:delete)
-
-          subject.publish request, routing_key rescue Timeout::Error
+      it 'delegates deliveries to #handle_delivery' do
+        details = {}
+        expect(consumer).to receive(:on_delivery) do |_, _, payload|
+          result = subject.handle_delivery(details, payload)
         end
+        subject.publish request, routing_key
       end
     end
+
   end # describe '#publish'
+
+  describe '#handle_delivery' do
+
+    let(:details) { {} }
+
+    it 'logs receiving details without the response' do
+      allow(subject).to receive(:log_response?).and_return(false)
+      expect(subject).to receive(:log).with(/^Receiving(?!.*response).*/)
+      subject.handle_delivery details, response
+    end
+
+    it 'logs receiving details with the response' do
+      allow(subject).to receive(:log_response?).and_return(true)
+      expect(subject).to receive(:log).with(/^Receiving(?=.*response).*/)
+      subject.handle_delivery details, response
+    end
+
+    it 'returns the response' do
+      result = subject.handle_delivery details, response
+      expect(result).to eq(response)
+    end
+
+    it 'releases the lock' do
+      expect(lock).to receive(:synchronize) { condition.signal }
+      subject.handle_delivery details, response
+    end
+  end
 
   describe '#shutdown' do
     let(:connection) { double 'Bunny' }
