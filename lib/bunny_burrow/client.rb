@@ -1,44 +1,53 @@
 require_relative 'base'
+require 'securerandom'
 
 module BunnyBurrow
   class Client < Base
+
+    DIRECT_REPLY_TO = 'amq.rabbitmq.reply-to'
+
+
     def publish(payload, routing_key)
       result = nil
 
-      # when creating a queue, a blank name indicates we want the AMPQ broker
-      # to generate a unique name for us. Also note that this queue will be on
-      # the default exchange
-      reply_to = channel.queue('', exclusive: true, auto_delete: true)
-
       details = {
         routing_key: routing_key,
-        reply_to: reply_to
+        reply_to: DIRECT_REPLY_TO
       }
+
       details[:request] = payload if log_request?
       log "Publishing #{details}"
 
       options = {
         routing_key: routing_key,
-        reply_to: reply_to.name,
+        reply_to: DIRECT_REPLY_TO,
         persistence: false
       }
+
+      consumer = Bunny::Consumer.new(channel, DIRECT_REPLY_TO, SecureRandom.uuid)
+      consumer.on_delivery do |_, _, received_payload|
+        result = handle_delivery(details, received_payload)
+
+      end
+
+      channel.basic_consume_with consumer
 
       topic_exchange.publish(payload.to_json, options)
 
       Timeout.timeout(timeout) do
-        reply_to.subscribe do |_, _, payload|
-          details[:response] = payload if log_response?
-          log "Receiving #{details}"
-          result = payload
-          lock.synchronize { condition.signal }
-        end
-
-        lock.synchronize { condition.wait(lock) }
+        lock.synchronize{condition.wait(lock)}
       end
 
-       result
-    ensure
-      reply_to.delete if reply_to
+      consumer.cancel
+      result
+    end
+
+    def handle_delivery(details, payload)
+      details[:response] = payload if log_response?
+      log "Receiving #{details}"
+      result = payload
+      lock.synchronize {condition.signal}
+      result
     end
   end
 end
