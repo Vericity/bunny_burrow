@@ -27,18 +27,19 @@ module BunnyBurrow
       consumer = Bunny::Consumer.new(channel, DIRECT_REPLY_TO, SecureRandom.uuid)
       consumer.on_delivery do |_, _, received_payload|
         result = handle_delivery(details, received_payload)
-
       end
 
-      channel.basic_consume_with consumer
 
-      topic_exchange.publish(payload.to_json, options)
+      begin
+        channel.basic_consume_with consumer
+        topic_exchange.publish(payload.to_json, options)
 
-      Timeout.timeout(timeout) do
-        lock.synchronize{condition.wait(lock)}
+        Timeout.timeout(timeout) do
+          lock.synchronize {condition.wait(lock)}
+        end
+      ensure
+        consumer.cancel
       end
-
-      consumer.cancel
       result
     end
 

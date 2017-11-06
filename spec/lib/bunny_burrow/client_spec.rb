@@ -26,13 +26,14 @@ describe BunnyBurrow::Client do
     let(:consumer)       { double Bunny::Consumer, cancel: nil }
     let(:request)        { { question: 'gimme the thing' } }
     let(:routing_key)    { 'routing.key' }
+    let(:payload)        { 'payload' }
     let(:topic_exchange) { double 'topic exchange' }
 
     before(:each) do
       allow(Bunny::Consumer).to receive(:new).and_return(consumer)
-      allow(consumer).to receive(:on_delivery)
       allow(channel).to receive(:topic).and_return(topic_exchange)
       allow(channel).to receive(:basic_consume_with)
+      allow(consumer).to receive(:on_delivery)
       allow(subject).to receive(:log)
       allow(topic_exchange).to receive(:publish)
     end
@@ -59,19 +60,37 @@ describe BunnyBurrow::Client do
       subject.publish request, routing_key
     end
 
-    it 'does not rescue timeout errors' do
-      allow(lock).to receive(:synchronize).and_raise(Timeout::Error.new)
-      # expect it to get all the way up
-      expect { subject.publish request, routing_key }.to raise_error(Timeout::Error)
+    it 'cancels the consumer' do
+      expect(consumer).to receive(:cancel)
+      subject.publish request, routing_key
     end
 
-    it 'does not rescue unexpected errors' do
-      allow(subject).to receive(:log_request?).and_raise(RuntimeError.new)
-      # expect it to get all the way up
-      expect { subject.publish request, routing_key }.to raise_error(RuntimeError)
+    context 'when there is an error' do
+      it 'does not rescue timeout errors' do
+        allow(lock).to receive(:synchronize).and_raise(Timeout::Error.new)
+        # expect it to get all the way up
+        expect { subject.publish request, routing_key }.to raise_error(Timeout::Error)
+      end
+
+      it 'does not rescue unexpected errors' do
+        allow(subject).to receive(:log_request?).and_raise(RuntimeError.new)
+        # expect it to get all the way up
+        expect { subject.publish request, routing_key }.to raise_error(RuntimeError)
+      end
+
+      it 'still cancels the consumer' do
+        allow(lock).to receive(:synchronize).and_raise(Timeout::Error.new)
+        expect(consumer).to receive(:cancel)
+        expect { subject.publish request, routing_key }.to raise_error(Timeout::Error)
+      end
     end
 
-    context 'consumer' do
+    describe 'consumer' do
+
+      before(:each) do
+        allow(consumer).to receive(:on_delivery).and_yield(nil, nil, payload)
+      end
+
       it 'creates a consumer to consume the reply-to pseudo-queue' do
         expect(Bunny::Consumer).to receive(:new).with(channel, BunnyBurrow::Client::DIRECT_REPLY_TO, an_instance_of(String))
         subject.publish request, routing_key
@@ -87,6 +106,11 @@ describe BunnyBurrow::Client do
         expect(consumer).to receive(:on_delivery) do |_, _, payload|
           result = subject.handle_delivery(details, payload)
         end
+        subject.publish request, routing_key
+      end
+
+      it 'calls handle_delivery' do
+        expect(subject).to receive(:handle_delivery)
         subject.publish request, routing_key
       end
     end
