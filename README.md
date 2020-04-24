@@ -133,8 +133,10 @@ desired, `publish` will need to be changed to use a dedicated mutex.
 
 ## Development
 
-After checking out the repo, run `bundle install [--path vendor/bundle]` to install dependencies.
-Then, run `bundle exec rspec` to run the tests.
+After checking out the repo, ensure you have `rbenv` installed and up to date,
+then run `bin/ci/test` to run the tests. When ready to make changes, choose
+your preferred ruby from `supported-rubies`, run `rbenv local ruby`, create
+a branch, and hack away.
 
 ## Contributing
 
