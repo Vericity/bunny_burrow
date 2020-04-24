@@ -15,16 +15,16 @@ Gem::Specification.new do |spec|
 
   spec.files                 = Dir['lib/**/*.rb']
   spec.require_paths         = ['lib']
-  spec.required_ruby_version = '>= 2.0.0'
+  spec.required_ruby_version = '>= 2.5.0'
 
-  spec.add_development_dependency 'bundler', '~> 1.11'
+  spec.add_development_dependency 'bundler', '~> 2.1'
   spec.add_development_dependency 'dotenv'
   spec.add_development_dependency 'pry'
   spec.add_development_dependency 'pry-nav'
   spec.add_development_dependency 'rake', '~> 12.3.3'
-  spec.add_development_dependency 'rspec', '~> 3.0'
-  spec.add_development_dependency 'simplecov', '~> 0.11.2'
-  spec.add_development_dependency 'simplecov-rcov', '~> 0.2.3'
+  spec.add_development_dependency 'rspec', '~> 3.8.0'
+  spec.add_development_dependency 'simplecov'
+  spec.add_development_dependency 'simplecov-rcov'
 
   spec.add_runtime_dependency 'bunny', '~> 2.3'
 end

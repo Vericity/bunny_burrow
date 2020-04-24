@@ -1,0 +1,37 @@
+#!/bin/bash --login
+
+function get_ruby {
+  rbenv install --list | grep -E "^$1.[0-9]+$" | sort --version-sort | tail -n 1
+}
+
+function ensure_ruby {
+  rbenv install --skip-existing $1
+  rbenv shell $1
+}
+
+function ensure_bundler {
+  rm -rf vendor/bundle
+  rm -f Gemfile.lock
+  gem install --no-document bundler
+  bundle config set path 'vendor/bundle'
+  bundle install
+}
+
+rubies=`cat supported-rubies`
+
+if [ "$1" != '' ]; then
+  rubies=($1)
+fi
+
+for ruby in ${rubies[*]}; do
+  ruby=$(get_ruby $ruby)
+  echo -e "Testing $ruby ...\n"
+  ensure_ruby $ruby
+  ensure_bundler
+  bundle exec rspec --order random
+  if [ $? -ne 0 ]; then
+    exit 1
+  fi
+  echo ''
+done
+
